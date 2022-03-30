@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Page</title>
+</head>
+<body>
+  <form action="/login" method="POST">
+    <p>Username: <input type="text" name="username" /></p>
+    <p>Password: <input type="text" name="password" /></p>
+    <p><input type="submit" value="Submit" /></p>
+  </form>
+  <button><a href="/">default page</a></button>
+  {% if current_user.is_authenticated %}
+  Hi {{ current_user.username }}!
+  <button><a href="/logout">logout</a></button>
+  {% endif %}
+  {% with messages = get_flashed_messages() %}
+  {% if messages %}
+  <ul class=flashes>
+    {% for message in messages %}
+      <p style="color: red;">{{ message }}</p>
+    {% endfor %}
+    </ul>
+  {% endif %}
+{% endwith %}
+</body>
+</html>
