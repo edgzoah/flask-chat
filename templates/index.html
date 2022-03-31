@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.8/socket.io.min.js"></script>
-  <title>Chat</title>
+  <title>Document</title>
 </head>
 <body>
-  <p id="guwno">{{receiver}}</p>
-  <script type="text/javascript" src="{{url_for('static', filename='script.js')}}"></script>
-  <div id="messages"></div>
-  <input type="text" id="mymessage">
-  <input type="button" value="Send" id="send" onclick="send()">
+  <form method="POST">
+    {{ form.hidden_tag() }}
+    {{ form.name.label }}: {{ form.name() }} {% for error in form.name.errors %}{{ error }}{% endfor %}<br>
+    {{ form.room.label }}: {{ form.room() }} {% for error in form.room.errors %}{{ error }}{% endfor %}<br>
+    {{ form.submit() }}
+</form>
 </body>
 </html>

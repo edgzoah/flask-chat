@@ -1,73 +1,55 @@
-from lib import *
-from model import *
+from flask import Flask, session, redirect, url_for, render_template, request
+from flask_login import LoginManager, login_required, UserMixin, login_user, current_user, logout_user
+from flask_socketio import emit, join_room, leave_room, SocketIO
+from forms import LoginForm
+
+
+socketio = SocketIO()
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'F3HUIF23H8923F9H8389FHXKLN'
+app.debug = True
+app.config['SECRET_KEY'] = 'secret_key'
+socketio.init_app(app)
 
-socketio = SocketIO(app, cors_allowed_origins='*')
 
-
-login_manager = LoginManager()
-login_manager.login_view = "login"
-login_manager.init_app(app)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:''@localhost/chat'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-db = SQLAlchemy(app)
-
-x = ''
-
-@login_manager.user_loader
-def load_user(user_id):
-    return users.query.filter_by(id=user_id).first()
-
-@app.route('/login' , methods=['GET' , 'POST'])
-def login():
-  if current_user.is_authenticated:
-    return redirect('/')
-  if request.method == 'POST':
-      username = request.form['username']
-      password = request.form['password']
-      registeredUser = users.query.filter_by(username=username, password=password).first()
-      if registeredUser:
-          login_user(registeredUser)
-          return redirect('/')
-      else:
-          flash('Incorrect username or password')
-          return redirect('/login')
-  return render_template('login.html')
-
-@app.route('/')
+@app.route('/', methods=['GET', 'POST'])
 def index():
-  return render_template('main.html')
+    form = LoginForm()
+    if form.validate_on_submit():
+        session['name'] = form.name.data
+        session['room'] = form.room.data
+        return redirect(url_for('.chat'))
+    elif request.method == 'GET':
+        form.name.data = session.get('name', '')
+        form.room.data = session.get('room', '')
+    return render_template('index.html', form=form)
 
-@app.route('/msg')
-@login_required
-def main():
-  global x
-  if request.args['user']:
-    if request.args['user'] != '':
-      if db.session.query(users.username).filter(users.username == request.args['user']).first():
-        x = request.args['user']
-        q = db.session.query(users.id).filter(users.username == current_user.username).first()
-        q1 = db.session.query(users.id).filter(users.username == x).first()
-        q2 = db.session.query(chat.message).filter(chat.sender == q[0] and chat.receiver == q1[0]).all()
-        q3 = db.session.query(chat.message).filter(chat.sender == q1[0] and chat.receiver == q[0]).all()
-        # print(q2)
-        # q1 = db.session.query(chat.message, users.username).filter(users.id == chat.receiver).first()
-        return render_template('index.html', receiver=request.args['user'])
-      else: return redirect('/')
-    else: return redirect('/')
-  else: return redirect('/')
 
-@socketio.on('message')
-def handlemsg(msg):
-  global x
-  print(x)
-  try:
-    socketio.send(current_user.username + ' - ' + msg, brodcast=True)
-  except:
-    return redirect('/')
+@app.route('/chat')
+def chat():
+    name = session.get('name', '')
+    room = session.get('room', '')
+    if name == '' or room == '':
+        return redirect(url_for('.index'))
+    return render_template('chat.html', name=name, room=room)
+
+@socketio.on('joined', namespace='/chat')
+def joined(message):
+    room = session.get('room')
+    join_room(room)
+    emit('status', {'msg': session.get('name') + ' has entered the room.'}, room=room)
+
+
+@socketio.on('text', namespace='/chat')
+def text(message):
+    room = session.get('room')
+    emit('message', {'msg': session.get('name') + ':' + message['msg']}, room=room)
+
+
+@socketio.on('left', namespace='/chat')
+def left(message):
+    room = session.get('room')
+    leave_room(room)
+    emit('status', {'msg': session.get('name') + ' has left the room.'}, room=room)
 
 if __name__ == '__main__':
-	socketio.run(app)
+    socketio.run(app)
