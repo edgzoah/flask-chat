@@ -4,10 +4,10 @@ from flask_socketio import emit, join_room, leave_room, SocketIO
 from forms import LoginForm
 
 
-socketio = SocketIO()
 app = Flask(__name__)
 app.debug = True
 app.config['SECRET_KEY'] = 'secret_key'
+socketio = SocketIO()
 socketio.init_app(app)
 
 
